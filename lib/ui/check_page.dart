@@ -119,30 +119,33 @@ class _CheckPageState extends State<CheckPage> {
     );
     if (source == null || !mounted) return;
 
-    List<OcrCandidate>? found;
+    OcrResult? res;
     try {
-      found = await scanImage(source);
+      res = await scanImage(source);
     } catch (e) {
       if (mounted) {
-        showSnack(context, tr(context, 'Lettura non riuscita', 'Scan failed'));
+        showSnack(
+          context,
+          tr(
+            context,
+            'Lettura della foto non riuscita: $e',
+            'Could not read the photo: $e',
+          ),
+        );
       }
       return;
     }
-    if (found == null || !mounted) return;
-    final vats = found.where((c) => c.kind == CandidateKind.vat).toList();
+    if (res == null || !mounted) return;
+    final vats = res.candidates
+        .where((c) => c.kind == CandidateKind.vat)
+        .toList();
     if (vats.isEmpty) {
-      showSnack(
-        context,
-        tr(
-          context,
-          'Nessuna partita IVA trovata nell\'immagine',
-          'No VAT number found in the image',
-        ),
-      );
+      await _showRecognizedText(res.text);
       return;
     }
     OcrCandidate? pick = vats.first;
-    if (vats.length > 1) {
+    // Si sceglie dall'elenco se ci sono più numeri o se l'unico è dubbio.
+    if (vats.length > 1 || !vats.first.checksumVerified) {
       pick = await showDialog<OcrCandidate>(
         context: context,
         builder: (context) => SimpleDialog(
@@ -150,12 +153,35 @@ class _CheckPageState extends State<CheckPage> {
           children: [
             for (final v in vats)
               SimpleDialogOption(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 onPressed: () => Navigator.pop(context, v),
                 child: Row(
                   children: [
                     Flag(countryByCode(v.country)?.flag ?? ''),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(v.label)),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(v.label),
+                          if (!v.checksumVerified)
+                            Text(
+                              tr(
+                                context,
+                                'Da controllare: potrebbe essere letta male',
+                                'Check it: it may have been misread',
+                              ),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: StatusColors.of(context).warning,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                     if (v.checksumVerified)
                       Icon(
                         Icons.check_circle_outline,
@@ -170,6 +196,15 @@ class _CheckPageState extends State<CheckPage> {
                   ],
                 ),
               ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _showRecognizedText(res!.text);
+              },
+              child: Text(
+                tr(context, 'Mostra il testo letto', 'Show recognised text'),
+              ),
+            ),
           ],
         ),
       );
@@ -179,7 +214,70 @@ class _CheckPageState extends State<CheckPage> {
       _country = pick!.country;
       _ctrl.text = pick.value;
     });
-    _check();
+    // Un numero dubbio va prima controllato dall'utente, non verificato subito.
+    if (pick.checksumVerified) {
+      _check();
+    } else {
+      _focus.requestFocus();
+    }
+  }
+
+  /// Mostra il testo riconosciuto, selezionabile: l'utente può copiare
+  /// il numero giusto anche quando la ricerca automatica non lo trova.
+  Future<void> _showRecognizedText(String text) {
+    final cs = Theme.of(context).colorScheme;
+    return showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * .7,
+          ),
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+            children: [
+              Text(
+                tr(
+                  context,
+                  'Nessuna partita IVA trovata',
+                  'No VAT number found',
+                ),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                text.trim().isEmpty
+                    ? tr(
+                        context,
+                        'Nella foto non è stato riconosciuto alcun testo. Riprova con più luce, inquadrando da vicino il numero e tenendo il telefono fermo.',
+                        'No text was recognised in the photo. Try again with more light, framing the number closely and holding the phone steady.',
+                      )
+                    : tr(
+                        context,
+                        'Questo è il testo letto dalla foto. Puoi selezionare e copiare il numero, poi incollarlo nel campo.',
+                        'This is the text read from the photo. You can select and copy the number, then paste it into the field.',
+                      ),
+                style: TextStyle(color: cs.onSurfaceVariant),
+              ),
+              if (text.trim().isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: SelectableText(text.trim()),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override

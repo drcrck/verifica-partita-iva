@@ -160,7 +160,7 @@ class _SettingsPageState extends State<SettingsPage> {
               style: muted,
             ),
             const SizedBox(height: 8),
-            Text('Partita IVA 2.0 · GDP Italia', style: muted),
+            Text('Partita IVA 2.0 · Diego Rigoni', style: muted),
           ],
         ),
       ),

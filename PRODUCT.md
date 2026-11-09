@@ -62,8 +62,10 @@ di controllo) per tutti gli Stati membri.
   dati sul dispositivo; nessun account, nessuna raccolta dati.
 - Identificativo Play Store `com.gdpitalia.VerificaPartitaIVA`, firmato con il
   keystore originale del 2018.
-- Non deciso: modello economico (gratuità, pubblicità) e presenza del marchio
-  dell'editore nell'interfaccia.
+- Editore: l'app è pubblicata sul Play Store a nome di **Diego Rigoni**.
+  Nessun riferimento a GDP Italia nei testi dell'app (l'identificativo
+  `com.gdpitalia.…` resta solo perché è la chiave tecnica della scheda Play).
+- Non deciso: modello economico (gratuità, pubblicità).
 - Stack: Flutter (Material 3); iOS eventuale, con lo stesso aspetto Material.
 
 ## Brand Commitments
