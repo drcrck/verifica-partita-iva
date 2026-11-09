@@ -1,0 +1,7 @@
+# Copia in android/key.properties e inserisci le password.
+# Keystore originale della v1 (2018): stesso certificato dell'app su Play Store.
+# SHA-1: 7C:9E:15:8A:FF:F7:79:BB:4A:2D:0F:02:CD:E1:A2:76:0C:90:F0:B9
+storeFile=C:/Progetti/firma_android.keystore
+storePassword=
+keyAlias=cert_gdp
+keyPassword=
