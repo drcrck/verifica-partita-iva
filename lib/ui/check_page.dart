@@ -9,6 +9,7 @@ import '../core/vies.dart';
 import '../l10n.dart';
 import '../main.dart';
 import 'result_card.dart';
+import 'theme.dart';
 import 'widgets.dart';
 
 final vies = ViesClient();
@@ -77,7 +78,9 @@ class _CheckPageState extends State<CheckPage> {
       await store.addResult(r);
       if (mounted) setState(() => _result = r);
     } on ViesException catch (e) {
-      if (mounted) setState(() => _error = viesErrorMessage(context, e.code, country));
+      if (mounted) {
+        setState(() => _error = viesErrorMessage(context, e.code, country));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -94,13 +97,20 @@ class _CheckPageState extends State<CheckPage> {
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
               title: Text(tr(context, 'Scatta una foto', 'Take a photo')),
-              subtitle: Text(tr(context, 'Fattura, biglietto da visita, scontrino…',
-                  'Invoice, business card, receipt…')),
+              subtitle: Text(
+                tr(
+                  context,
+                  'Fattura, biglietto da visita, scontrino…',
+                  'Invoice, business card, receipt…',
+                ),
+              ),
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: Text(tr(context, 'Scegli dalla galleria', 'Pick from gallery')),
+              title: Text(
+                tr(context, 'Scegli dalla galleria', 'Pick from gallery'),
+              ),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
           ],
@@ -113,14 +123,22 @@ class _CheckPageState extends State<CheckPage> {
     try {
       found = await scanImage(source);
     } catch (e) {
-      if (mounted) showSnack(context, tr(context, 'Lettura non riuscita', 'Scan failed'));
+      if (mounted) {
+        showSnack(context, tr(context, 'Lettura non riuscita', 'Scan failed'));
+      }
       return;
     }
     if (found == null || !mounted) return;
     final vats = found.where((c) => c.kind == CandidateKind.vat).toList();
     if (vats.isEmpty) {
-      showSnack(context,
-          tr(context, 'Nessuna partita IVA trovata nell\'immagine', 'No VAT number found in the image'));
+      showSnack(
+        context,
+        tr(
+          context,
+          'Nessuna partita IVA trovata nell\'immagine',
+          'No VAT number found in the image',
+        ),
+      );
       return;
     }
     OcrCandidate? pick = vats.first;
@@ -133,13 +151,24 @@ class _CheckPageState extends State<CheckPage> {
             for (final v in vats)
               SimpleDialogOption(
                 onPressed: () => Navigator.pop(context, v),
-                child: Row(children: [
-                  Text(countryByCode(v.country)?.flag ?? ''),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(v.label)),
-                  if (v.checksumVerified)
-                    const Icon(Icons.check_circle_outline, size: 18, color: Colors.green),
-                ]),
+                child: Row(
+                  children: [
+                    Flag(countryByCode(v.country)?.flag ?? ''),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(v.label)),
+                    if (v.checksumVerified)
+                      Icon(
+                        Icons.check_circle_outline,
+                        size: 18,
+                        color: StatusColors.of(context).success,
+                        semanticLabel: tr(
+                          context,
+                          'cifra di controllo corretta',
+                          'check digit correct',
+                        ),
+                      ),
+                  ],
+                ),
               ),
           ],
         ),
@@ -158,98 +187,217 @@ class _CheckPageState extends State<CheckPage> {
     final store = AppScope.of(context);
     final country = countryByCode(_countryCode)!;
     final number = cleanVat(_ctrl.text);
+    final st = StatusColors.of(context);
+    final cs = Theme.of(context).colorScheme;
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        CountryDropdown(
-          value: country.code,
-          availability: _availability,
-          onChanged: (v) {
-            setState(() => _country = v);
-            _focus.requestFocus();
-          },
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _ctrl,
-          focusNode: _focus,
-          textCapitalization: TextCapitalization.characters,
-          textInputAction: TextInputAction.search,
-          autocorrect: false,
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9A-Za-z .\-/+*]')),
-          ],
-          decoration: InputDecoration(
-            labelText: tr(context, 'Partita IVA', 'VAT number'),
-            hintText: country.example,
-            prefixText: '${country.code} ',
-            suffixIcon: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_ctrl.text.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () => setState(() {
-                      _ctrl.clear();
-                      _result = null;
-                      _error = null;
-                    }),
-                  ),
+    final form = <Widget>[
+      CountryDropdown(
+        value: country.code,
+        availability: _availability,
+        onChanged: (v) {
+          setState(() => _country = v);
+          _focus.requestFocus();
+        },
+      ),
+      const SizedBox(height: 12),
+      TextField(
+        controller: _ctrl,
+        focusNode: _focus,
+        textCapitalization: TextCapitalization.characters,
+        textInputAction: TextInputAction.search,
+        autocorrect: false,
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'[0-9A-Za-z .\-/+*]')),
+        ],
+        decoration: InputDecoration(
+          labelText: tr(context, 'Partita IVA', 'VAT number'),
+          hintText: country.example,
+          prefixText: '${country.code} ',
+          suffixIcon: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_ctrl.text.isNotEmpty)
                 IconButton(
-                  tooltip: tr(context, 'Leggi da foto', 'Scan from photo'),
-                  icon: const Icon(Icons.document_scanner_outlined),
-                  onPressed: _scan,
+                  tooltip: tr(context, 'Cancella', 'Clear'),
+                  icon: const Icon(Icons.clear),
+                  onPressed: () => setState(() {
+                    _ctrl.clear();
+                    _result = null;
+                    _error = null;
+                  }),
                 ),
-              ],
-            ),
+              IconButton(
+                tooltip: tr(context, 'Leggi da foto', 'Scan from photo'),
+                icon: const Icon(Icons.document_scanner_outlined),
+                onPressed: _scan,
+              ),
+            ],
           ),
-          onChanged: (_) => setState(() {}),
-          onSubmitted: (_) => _check(),
         ),
-        if (number.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          FormalCheckHint(checkVat(country.code, number)),
-        ],
-        const SizedBox(height: 16),
-        FilledButton.icon(
-          onPressed: _loading || number.isEmpty ? null : _check,
-          icon: _loading
-              ? const SizedBox.square(
-                  dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Icon(Icons.search),
-          label: Text(tr(context, 'Verifica su VIES', 'Check on VIES')),
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-        ),
-        if (_availability[country.code] == false) ...[
-          const SizedBox(height: 12),
-          Text(
-            tr(context,
-                'Il servizio nazionale ${country.code} risulta al momento non disponibile.',
-                'The ${country.code} national service is currently unavailable.'),
-            style: const TextStyle(color: Colors.orange),
-          ),
-        ],
-        const SizedBox(height: 20),
-        if (_error != null)
-          Card(
-            color: Theme.of(context).colorScheme.errorContainer,
-            child: ListTile(
-              leading: const Icon(Icons.cloud_off),
-              title: Text(_error!),
-              trailing: IconButton(icon: const Icon(Icons.refresh), onPressed: _check),
+        onChanged: (_) => setState(() {}),
+        onSubmitted: (_) => _check(),
+      ),
+      if (number.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        FormalCheckHint(checkVat(country.code, number)),
+      ],
+      const SizedBox(height: 16),
+      FilledButton.icon(
+        onPressed: _loading || number.isEmpty ? null : _check,
+        icon: _loading
+            ? const SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.search),
+        label: Text(tr(context, 'Verifica su VIES', 'Check on VIES')),
+        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+      ),
+      if (_availability[country.code] == false) ...[
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ExcludeSemantics(
+              child: Icon(Icons.cloud_off, size: 18, color: st.warning),
             ),
-          ),
-        if (_result != null) ResultCard(result: _result!),
-        if (_result == null && _error == null && !_loading && store.requesterVat.isEmpty)
-          _Tip(
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                tr(
+                  context,
+                  'Il servizio nazionale ${country.code} risulta al momento non disponibile: la verifica potrebbe non riuscire.',
+                  'The ${country.code} national service is currently unavailable: the check may fail.',
+                ),
+                style: TextStyle(color: st.warning),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ];
+
+    final tip = store.requesterVat.isEmpty
+        ? _Tip(
             icon: Icons.receipt_long_outlined,
             text: tr(
-                context,
-                'Suggerimento: inserisci la tua partita IVA nelle Impostazioni per ottenere il numero di consultazione ufficiale VIES, utile come prova della verifica.',
-                'Tip: enter your own VAT number in Settings to get the official VIES consultation number, useful as proof of the check.'),
+              context,
+              'Suggerimento: inserisci la tua partita IVA nelle Impostazioni per ottenere il numero di consultazione ufficiale VIES, utile come prova della verifica.',
+              'Tip: enter your own VAT number in Settings to get the official VIES consultation number, useful as proof of the check.',
+            ),
+          )
+        : null;
+
+    final outcome = <Widget>[
+      if (_error != null)
+        Card(
+          color: cs.errorContainer,
+          child: Semantics(
+            liveRegion: true,
+            child: ListTile(
+              leading: const ExcludeSemantics(child: Icon(Icons.cloud_off)),
+              title: Text(_error!),
+              textColor: cs.onErrorContainer,
+              iconColor: cs.onErrorContainer,
+              trailing: IconButton(
+                tooltip: tr(context, 'Riprova', 'Retry'),
+                icon: const Icon(Icons.refresh),
+                onPressed: _check,
+              ),
+            ),
           ),
-      ],
+        ),
+      if (_result != null) ResultCard(result: _result!),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, c) {
+        // Tablet in orizzontale: modulo a sinistra, esito a destra.
+        if (c.maxWidth >= expandedWidth) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                width: 400,
+                child: ListView(
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    ...form,
+                    if (tip != null) ...[const SizedBox(height: 20), tip],
+                  ],
+                ),
+              ),
+              const VerticalDivider(width: 1),
+              Expanded(
+                child: outcome.isEmpty
+                    ? _EmptyOutcome(loading: _loading)
+                    : ListView(
+                        padding: const EdgeInsets.all(24),
+                        children: [
+                          Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 640),
+                              child: Column(children: outcome),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ],
+          );
+        }
+        return Readable(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              ...form,
+              const SizedBox(height: 20),
+              ...outcome,
+              if (outcome.isEmpty && !_loading && tip != null) tip,
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Pannello destro vuoto (solo tablet in orizzontale).
+class _EmptyOutcome extends StatelessWidget {
+  final bool loading;
+  const _EmptyOutcome({required this.loading});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: loading
+            ? const CircularProgressIndicator()
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ExcludeSemantics(
+                    child: Icon(
+                      Icons.verified_outlined,
+                      size: 64,
+                      color: cs.outlineVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    tr(
+                      context,
+                      "L'esito della verifica comparirà qui.",
+                      'The check result will appear here.',
+                    ),
+                    style: TextStyle(color: cs.onSurfaceVariant),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+      ),
     );
   }
 }
@@ -269,7 +417,9 @@ class _Tip extends StatelessWidget {
         children: [
           Icon(icon, color: cs.onSurfaceVariant),
           const SizedBox(width: 12),
-          Expanded(child: Text(text, style: TextStyle(color: cs.onSurfaceVariant))),
+          Expanded(
+            child: Text(text, style: TextStyle(color: cs.onSurfaceVariant)),
+          ),
         ],
       ),
     );

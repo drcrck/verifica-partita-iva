@@ -59,8 +59,9 @@ FormalCheck checkVat(String countryCode, String rawNumber) {
       var b = n;
       if (fmt(r'\d{9}')) b = '0$n';
       if (!RegExp(r'^[01]\d{9}$').hasMatch(b)) return FormalCheck.invalid;
-      return res(97 - int.parse(b.substring(0, 8)) % 97 ==
-          int.parse(b.substring(8)));
+      return res(
+        97 - int.parse(b.substring(0, 8)) % 97 == int.parse(b.substring(8)),
+      );
     case 'DE':
       if (!fmt(r'[1-9]\d{8}')) return FormalCheck.invalid;
       return res(_iso7064Mod1110(n));
@@ -90,7 +91,9 @@ FormalCheck checkVat(String countryCode, String rawNumber) {
     case 'FR':
       if (!fmt(r'[0-9A-HJ-NP-Z]{2}\d{9}')) return FormalCheck.invalid;
       final key = n.substring(0, 2);
-      if (!_allDigits(key)) return FormalCheck.formatOk; // nuovo formato alfanumerico
+      if (!_allDigits(key)) {
+        return FormalCheck.formatOk; // nuovo formato alfanumerico
+      }
       final siren = int.parse(n.substring(2));
       return res((12 + 3 * (siren % 97)) % 97 == int.parse(key));
     case 'HU':
@@ -100,7 +103,8 @@ FormalCheck checkVat(String countryCode, String rawNumber) {
     case 'LU':
       if (!fmt(r'\d{8}')) return FormalCheck.invalid;
       return res(
-          int.parse(n.substring(0, 6)) % 89 == int.parse(n.substring(6)));
+        int.parse(n.substring(0, 6)) % 89 == int.parse(n.substring(6)),
+      );
     case 'MT':
       if (!fmt(r'[1-9]\d{7}')) return FormalCheck.invalid;
       final s = _weighted(n.substring(0, 6), [3, 4, 6, 7, 8, 9]);

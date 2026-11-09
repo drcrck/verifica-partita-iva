@@ -54,7 +54,8 @@ CodiceFiscaleInfo checkCodiceFiscale(String raw) {
     return const CodiceFiscaleInfo(valid: false, error: 'length');
   }
   final pattern = RegExp(
-      r'^[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$');
+    r'^[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$',
+  );
   if (!pattern.hasMatch(cf)) {
     return const CodiceFiscaleInfo(valid: false, error: 'format');
   }

@@ -8,6 +8,7 @@ import '../core/vat_validator.dart';
 import '../core/vies.dart';
 import '../l10n.dart';
 import '../main.dart';
+import 'theme.dart';
 import 'widgets.dart';
 
 /// Scheda con l'esito di una verifica e le azioni disponibili.
@@ -23,6 +24,8 @@ class ResultCard extends StatelessWidget {
     final c = countryByCode(r.country);
     final fav = store.isFavorite(r.key);
     final formal = checkVat(r.country, r.vat);
+    final st = StatusColors.of(context);
+    final onHeader = r.valid ? st.onSuccessContainer : cs.onErrorContainer;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -30,25 +33,55 @@ class ResultCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            color: r.valid ? Colors.green.withValues(alpha: .15) : cs.errorContainer,
-            padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+            color: r.valid ? st.successContainer : cs.errorContainer,
+            padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
             child: Row(
               children: [
-                Icon(r.valid ? Icons.verified : Icons.cancel,
-                    color: r.valid ? Colors.green.shade700 : cs.error),
-                const SizedBox(width: 10),
+                ExcludeSemantics(
+                  child: Icon(
+                    r.valid ? Icons.verified : Icons.cancel,
+                    color: r.valid ? st.success : cs.error,
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    r.valid
-                        ? tr(context, 'Partita IVA valida', 'Valid VAT number')
-                        : tr(context, 'Non valida in VIES', 'Not valid in VIES'),
-                    style: Theme.of(context).textTheme.titleMedium,
+                  // Annunciato da TalkBack quando l'esito compare.
+                  child: Semantics(
+                    liveRegion: true,
+                    header: true,
+                    child: Text(
+                      r.valid
+                          ? tr(
+                              context,
+                              'Partita IVA valida',
+                              'Valid VAT number',
+                            )
+                          : tr(
+                              context,
+                              'Non valida in VIES',
+                              'Not valid in VIES',
+                            ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleMedium?.copyWith(color: onHeader),
+                    ),
                   ),
                 ),
                 IconButton(
-                  tooltip: tr(context, 'Preferito', 'Favourite'),
-                  icon: Icon(fav ? Icons.star : Icons.star_border,
-                      color: fav ? Colors.amber.shade700 : null),
+                  tooltip: fav
+                      ? tr(
+                          context,
+                          'Togli dai preferiti',
+                          'Remove from favourites',
+                        )
+                      : tr(
+                          context,
+                          'Aggiungi ai preferiti',
+                          'Add to favourites',
+                        ),
+                  isSelected: fav,
+                  icon: Icon(Icons.star_border, color: onHeader),
+                  selectedIcon: Icon(Icons.star, color: st.favorite),
                   onPressed: () => store.toggleFavorite(r.key),
                 ),
               ],
@@ -62,20 +95,23 @@ class ResultCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (r.name != null)
-                  SelectableText(r.name!,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(fontWeight: FontWeight.w600)),
+                  SelectableText(
+                    r.name!,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 if (r.address != null) ...[
                   const SizedBox(height: 4),
                   SelectableText(r.address!.trim()),
                 ],
                 if (r.valid && r.name == null)
                   Text(
-                    tr(context,
-                        'Questo paese non comunica denominazione e indirizzo a VIES.',
-                        'This country does not share name and address with VIES.'),
+                    tr(
+                      context,
+                      'Questo paese non comunica denominazione e indirizzo a VIES.',
+                      'This country does not share name and address with VIES.',
+                    ),
                     style: TextStyle(color: cs.onSurfaceVariant),
                   ),
                 if (!r.valid && formal != FormalCheck.invalid)
@@ -87,25 +123,39 @@ class ResultCard extends StatelessWidget {
                                 "l'archivio contiene solo le partite IVA italiane abilitate alle "
                                 'operazioni intracomunitarie. Potrebbe anche essere cessata.',
                             'The number is formally correct but not in VIES: only Italian '
-                                'VAT numbers enabled for intra-EU trade are listed. It may also be closed.')
+                                'VAT numbers enabled for intra-EU trade are listed. It may also be closed.',
+                          )
                         : tr(
                             context,
                             'Il numero è formalmente corretto ma non risulta in VIES '
                                 '(non abilitato a operazioni intracomunitarie o cessato).',
                             'The number is formally correct but not registered in VIES '
-                                '(not enabled for intra-EU trade, or deregistered).'),
+                                '(not enabled for intra-EU trade, or deregistered).',
+                          ),
                     style: TextStyle(color: cs.onSurfaceVariant),
                   ),
                 const Divider(height: 24),
-                _kv(context, tr(context, 'Partita IVA', 'VAT number'),
-                    '${c?.flag ?? ''} ${r.country} ${r.vat}', copy: '${r.country}${r.vat}'),
-                _kv(context, tr(context, 'Verificata il', 'Checked on'),
-                    DateFormat.yMd(Localizations.localeOf(context).toString())
-                        .add_Hm()
-                        .format(r.date)),
+                _kv(
+                  context,
+                  tr(context, 'Partita IVA', 'VAT number'),
+                  '${r.country} ${r.vat}',
+                  copy: '${r.country}${r.vat}',
+                  leading: c == null ? null : Flag(c.flag),
+                ),
+                _kv(
+                  context,
+                  tr(context, 'Verificata il', 'Checked on'),
+                  DateFormat.yMd(
+                    Localizations.localeOf(context).toString(),
+                  ).add_Hm().format(r.date),
+                ),
                 if (r.consultation != null)
-                  _kv(context, tr(context, 'N. consultazione', 'Consultation no.'),
-                      r.consultation!, copy: r.consultation),
+                  _kv(
+                    context,
+                    tr(context, 'N. consultazione', 'Consultation no.'),
+                    r.consultation!,
+                    copy: r.consultation,
+                  ),
               ],
             ),
           ),
@@ -125,7 +175,8 @@ class ResultCard extends StatelessWidget {
                   ActionChip(
                     avatar: const Icon(Icons.phone_outlined, size: 18),
                     label: const Text('PagineBianche'),
-                    onPressed: () => openPagineBianche(r.name!, r.addressOneLine ?? ''),
+                    onPressed: () =>
+                        openPagineBianche(r.name!, r.addressOneLine ?? ''),
                   ),
                 if (r.name != null)
                   ActionChip(
@@ -151,21 +202,46 @@ class ResultCard extends StatelessWidget {
     );
   }
 
-  Widget _kv(BuildContext context, String k, String v, {String? copy}) {
+  Widget _kv(
+    BuildContext context,
+    String k,
+    String v, {
+    String? copy,
+    Widget? leading,
+  }) {
+    final label = Text(
+      k,
+      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+    );
+    final value = Row(
+      children: [
+        if (leading != null) ...[leading, const SizedBox(width: 6)],
+        Expanded(child: SelectableText(v)),
+      ],
+    );
+    // Con il testo ingrandito l'etichetta va sopra il valore, invece di
+    // stringerlo in una colonna fissa.
+    final stacked = MediaQuery.textScalerOf(context).scale(14) > 16;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          SizedBox(
-            width: 130,
-            child: Text(k,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          Expanded(
+            child: stacked
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [label, value],
+                  )
+                : Row(
+                    children: [
+                      SizedBox(width: 130, child: label),
+                      Expanded(child: value),
+                    ],
+                  ),
           ),
-          Expanded(child: SelectableText(v)),
           if (copy != null)
             IconButton(
-              visualDensity: VisualDensity.compact,
-              tooltip: tr(context, 'Copia', 'Copy'),
+              tooltip: '${tr(context, 'Copia', 'Copy')} $k',
               icon: const Icon(Icons.copy, size: 18),
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: copy));

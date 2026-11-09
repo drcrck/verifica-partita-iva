@@ -61,16 +61,20 @@ Future<Uint8List?> streetViewImage(String address) async {
     final loc = Uri.encodeQueryComponent(address);
     final meta = await http
         .get(
-          Uri.parse('https://maps.googleapis.com/maps/api/streetview/metadata'
-              '?location=$loc&source=outdoor&key=$mapsApiKey'),
+          Uri.parse(
+            'https://maps.googleapis.com/maps/api/streetview/metadata'
+            '?location=$loc&source=outdoor&key=$mapsApiKey',
+          ),
           headers: headers,
         )
         .timeout(const Duration(seconds: 10));
     if (jsonDecode(meta.body)['status'] == 'OK') {
       final img = await http
           .get(
-            Uri.parse('https://maps.googleapis.com/maps/api/streetview'
-                '?size=640x360&location=$loc&source=outdoor&key=$mapsApiKey'),
+            Uri.parse(
+              'https://maps.googleapis.com/maps/api/streetview'
+              '?size=640x360&location=$loc&source=outdoor&key=$mapsApiKey',
+            ),
             headers: headers,
           )
           .timeout(const Duration(seconds: 15));
@@ -86,14 +90,16 @@ Future<void> _open(String url) async {
 }
 
 Future<void> openMaps(String address) => _open(
-    'https://www.google.com/maps/search/?api=1&query=${Uri.encodeQueryComponent(address)}');
+  'https://www.google.com/maps/search/?api=1&query=${Uri.encodeQueryComponent(address)}',
+);
 
 Future<void> openPagineBianche(String name, String address) => _open(
-    'https://www.paginebianche.it/cerca?qs=${Uri.encodeQueryComponent(name)}'
-    '&dv=${Uri.encodeQueryComponent(address)}');
+  'https://www.paginebianche.it/cerca?qs=${Uri.encodeQueryComponent(name)}'
+  '&dv=${Uri.encodeQueryComponent(address)}',
+);
 
-Future<void> openWebSearch(String query) => _open(
-    'https://www.google.com/search?q=${Uri.encodeQueryComponent(query)}');
+Future<void> openWebSearch(String query) =>
+    _open('https://www.google.com/search?q=${Uri.encodeQueryComponent(query)}');
 
 String _fmtDate(DateTime d) => DateFormat('dd/MM/yyyy HH:mm').format(d);
 
@@ -101,14 +107,28 @@ String resultText(BuildContext context, VatResult r) {
   final c = countryByCode(r.country);
   final b = StringBuffer()
     ..writeln('${c?.flag ?? ''} ${r.country} ${r.vat}')
-    ..writeln(r.valid
-        ? tr(context, '✅ Partita IVA valida (VIES)', '✅ Valid VAT number (VIES)')
-        : tr(context, '❌ Partita IVA non valida (VIES)', '❌ Invalid VAT number (VIES)'));
+    ..writeln(
+      r.valid
+          ? tr(
+              context,
+              '✅ Partita IVA valida (VIES)',
+              '✅ Valid VAT number (VIES)',
+            )
+          : tr(
+              context,
+              '❌ Partita IVA non valida (VIES)',
+              '❌ Invalid VAT number (VIES)',
+            ),
+    );
   if (r.name != null) b.writeln(r.name);
   if (r.addressOneLine != null) b.writeln(r.addressOneLine);
-  b.writeln('${tr(context, 'Verificata il', 'Checked on')} ${_fmtDate(r.date)}');
+  b.writeln(
+    '${tr(context, 'Verificata il', 'Checked on')} ${_fmtDate(r.date)}',
+  );
   if (r.consultation != null) {
-    b.writeln('${tr(context, 'N. consultazione', 'Consultation no.')}: ${r.consultation}');
+    b.writeln(
+      '${tr(context, 'N. consultazione', 'Consultation no.')}: ${r.consultation}',
+    );
   }
   return b.toString().trim();
 }
@@ -141,77 +161,94 @@ Future<Uint8List> buildReceiptPdf(BuildContext context, VatResult r) async {
   );
 
   pw.Widget row(String label, String? value) => pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(vertical: 5),
-        child: pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.SizedBox(
-              width: 150,
-              child: pw.Text(label,
-                  style: const pw.TextStyle(color: PdfColors.grey700)),
-            ),
-            pw.Expanded(
-              child: pw.Text(value ?? '—',
-                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-            ),
-          ],
-        ),
-      );
-
-  doc.addPage(pw.Page(
-    theme: theme,
-    pageFormat: PdfPageFormat.a4,
-    margin: const pw.EdgeInsets.all(48),
-    build: (_) => pw.Column(
+    padding: const pw.EdgeInsets.symmetric(vertical: 5),
+    child: pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text(t('Verifica partita IVA comunitaria', 'EU VAT number check'),
-            style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
-        pw.SizedBox(height: 4),
-        pw.Text(
-            t('Fonte: VIES – Commissione europea', 'Source: VIES – European Commission'),
-            style: const pw.TextStyle(color: PdfColors.grey700)),
-        pw.Divider(height: 32),
-        pw.Container(
-          padding: const pw.EdgeInsets.all(12),
-          decoration: pw.BoxDecoration(
-            color: r.valid ? PdfColors.green50 : PdfColors.red50,
-            border: pw.Border.all(
-                color: r.valid ? PdfColors.green700 : PdfColors.red700),
-          ),
+        pw.SizedBox(
+          width: 150,
           child: pw.Text(
-            r.valid
-                ? t('PARTITA IVA VALIDA', 'VALID VAT NUMBER')
-                : t('PARTITA IVA NON VALIDA', 'INVALID VAT NUMBER'),
-            style: pw.TextStyle(
-              fontSize: 16,
-              fontWeight: pw.FontWeight.bold,
-              color: r.valid ? PdfColors.green900 : PdfColors.red900,
-            ),
+            label,
+            style: const pw.TextStyle(color: PdfColors.grey700),
           ),
         ),
-        pw.SizedBox(height: 16),
-        row(t('Stato membro', 'Member state'),
-            '${r.country} – ${c?.name(en) ?? ''}'),
-        row(t('Partita IVA', 'VAT number'), r.vat),
-        row(t('Denominazione', 'Name'), r.name),
-        row(t('Indirizzo', 'Address'), r.address?.trim()),
-        row(t('Data e ora verifica', 'Date and time'), _fmtDate(r.date)),
-        row(t('N. consultazione', 'Consultation number'), r.consultation),
-        pw.Spacer(),
-        pw.Text(
-          r.consultation != null
-              ? t(
-                  'Il numero di consultazione è rilasciato da VIES e può essere usato per dimostrare alle autorità fiscali di aver verificato la partita IVA in questa data.',
-                  'The consultation number is issued by VIES and can be used to prove to tax authorities that the VAT number was checked on this date.')
-              : t(
-                  'Per ottenere un numero di consultazione ufficiale, inserisci la tua partita IVA nelle impostazioni dell\'app.',
-                  'To obtain an official consultation number, enter your own VAT number in the app settings.'),
-          style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+        pw.Expanded(
+          child: pw.Text(
+            value ?? '—',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+          ),
         ),
       ],
     ),
-  ));
+  );
+
+  doc.addPage(
+    pw.Page(
+      theme: theme,
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(48),
+      build: (_) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            t('Verifica partita IVA comunitaria', 'EU VAT number check'),
+            style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            t(
+              'Fonte: VIES – Commissione europea',
+              'Source: VIES – European Commission',
+            ),
+            style: const pw.TextStyle(color: PdfColors.grey700),
+          ),
+          pw.Divider(height: 32),
+          pw.Container(
+            padding: const pw.EdgeInsets.all(12),
+            decoration: pw.BoxDecoration(
+              color: r.valid ? PdfColors.green50 : PdfColors.red50,
+              border: pw.Border.all(
+                color: r.valid ? PdfColors.green700 : PdfColors.red700,
+              ),
+            ),
+            child: pw.Text(
+              r.valid
+                  ? t('PARTITA IVA VALIDA', 'VALID VAT NUMBER')
+                  : t('PARTITA IVA NON VALIDA', 'INVALID VAT NUMBER'),
+              style: pw.TextStyle(
+                fontSize: 16,
+                fontWeight: pw.FontWeight.bold,
+                color: r.valid ? PdfColors.green900 : PdfColors.red900,
+              ),
+            ),
+          ),
+          pw.SizedBox(height: 16),
+          row(
+            t('Stato membro', 'Member state'),
+            '${r.country} – ${c?.name(en) ?? ''}',
+          ),
+          row(t('Partita IVA', 'VAT number'), r.vat),
+          row(t('Denominazione', 'Name'), r.name),
+          row(t('Indirizzo', 'Address'), r.address?.trim()),
+          row(t('Data e ora verifica', 'Date and time'), _fmtDate(r.date)),
+          row(t('N. consultazione', 'Consultation number'), r.consultation),
+          pw.Spacer(),
+          pw.Text(
+            r.consultation != null
+                ? t(
+                    'Il numero di consultazione è rilasciato da VIES e può essere usato per dimostrare alle autorità fiscali di aver verificato la partita IVA in questa data.',
+                    'The consultation number is issued by VIES and can be used to prove to tax authorities that the VAT number was checked on this date.',
+                  )
+                : t(
+                    'Per ottenere un numero di consultazione ufficiale, inserisci la tua partita IVA nelle impostazioni dell\'app.',
+                    'To obtain an official consultation number, enter your own VAT number in the app settings.',
+                  ),
+            style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+          ),
+        ],
+      ),
+    ),
+  );
   return doc.save();
 }
 
@@ -219,7 +256,9 @@ Future<void> shareReceiptPdf(BuildContext context, VatResult r) async {
   final bytes = await buildReceiptPdf(context, r);
   final stamp = DateFormat('yyyyMMdd_HHmm').format(r.date);
   await Printing.sharePdf(
-      bytes: bytes, filename: 'VIES_${r.country}${r.vat}_$stamp.pdf');
+    bytes: bytes,
+    filename: 'VIES_${r.country}${r.vat}_$stamp.pdf',
+  );
 }
 
 /// Esporta righe CSV (separatore ";", compatibile con Excel italiano).
@@ -233,6 +272,7 @@ Future<void> shareCsv(String filename, List<List<String?>> rows) async {
   final dir = await getTemporaryDirectory();
   final f = File('${dir.path}/$filename');
   await f.writeAsString(csv, encoding: utf8);
-  await SharePlus.instance
-      .share(ShareParams(files: [XFile(f.path, mimeType: 'text/csv')]));
+  await SharePlus.instance.share(
+    ShareParams(files: [XFile(f.path, mimeType: 'text/csv')]),
+  );
 }

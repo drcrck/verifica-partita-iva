@@ -16,7 +16,9 @@ class AppStore extends ChangeNotifier {
 
   late SharedPreferences _p;
 
-  ThemeMode themeMode = ThemeMode.system;
+  /// Separato dal resto: solo il cambio di tema ridisegna l'intera app.
+  final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.system);
+  ThemeMode get themeMode => themeNotifier.value;
   String requesterCountry = 'IT';
   String requesterVat = '';
   String defaultCountry = 'IT';
@@ -24,7 +26,7 @@ class AppStore extends ChangeNotifier {
 
   Future<void> load() async {
     _p = await SharedPreferences.getInstance();
-    themeMode = ThemeMode.values[_p.getInt(_kTheme) ?? 0];
+    themeNotifier.value = ThemeMode.values[_p.getInt(_kTheme) ?? 0];
     requesterCountry = _p.getString(_kReqCountry) ?? 'IT';
     requesterVat = _p.getString(_kReqVat) ?? '';
     defaultCountry = _p.getString(_kDefCountry) ?? 'IT';
@@ -79,7 +81,7 @@ class AppStore extends ChangeNotifier {
   }
 
   Future<void> setTheme(ThemeMode m) async {
-    themeMode = m;
+    themeNotifier.value = m;
     notifyListeners();
     await _p.setInt(_kTheme, m.index);
   }

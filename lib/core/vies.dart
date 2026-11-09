@@ -37,26 +37,26 @@ class VatResult {
       .join(', ');
 
   Map<String, dynamic> toJson() => {
-        'c': country,
-        'v': vat,
-        'ok': valid,
-        'n': name,
-        'a': address,
-        'd': date.toIso8601String(),
-        'r': consultation,
-        'f': favorite,
-      };
+    'c': country,
+    'v': vat,
+    'ok': valid,
+    'n': name,
+    'a': address,
+    'd': date.toIso8601String(),
+    'r': consultation,
+    'f': favorite,
+  };
 
   factory VatResult.fromJson(Map<String, dynamic> j) => VatResult(
-        country: j['c'],
-        vat: j['v'],
-        valid: j['ok'],
-        name: j['n'],
-        address: j['a'],
-        date: DateTime.parse(j['d']),
-        consultation: j['r'],
-        favorite: j['f'] ?? false,
-      );
+    country: j['c'],
+    vat: j['v'],
+    valid: j['ok'],
+    name: j['n'],
+    address: j['a'],
+    date: DateTime.parse(j['d']),
+    consultation: j['r'],
+    favorite: j['f'] ?? false,
+  );
 }
 
 /// Errori restituiti da VIES, tradotti in un codice stabile per la UI.
@@ -66,13 +66,13 @@ class ViesException implements Exception {
 
   /// true se ha senso riprovare più tardi.
   bool get transient => const {
-        'SERVICE_UNAVAILABLE',
-        'MS_UNAVAILABLE',
-        'TIMEOUT',
-        'MS_MAX_CONCURRENT_REQ',
-        'GLOBAL_MAX_CONCURRENT_REQ',
-        'NETWORK',
-      }.contains(code);
+    'SERVICE_UNAVAILABLE',
+    'MS_UNAVAILABLE',
+    'TIMEOUT',
+    'MS_MAX_CONCURRENT_REQ',
+    'GLOBAL_MAX_CONCURRENT_REQ',
+    'NETWORK',
+  }.contains(code);
 
   @override
   String toString() => 'ViesException($code)';
@@ -121,10 +121,12 @@ class ViesClient {
             )
             .timeout(const Duration(seconds: 30));
       } else {
-        resp = await _http.get(
-          Uri.parse('$_base/ms/$country/vat/${Uri.encodeComponent(vat)}'),
-          headers: {'Accept': 'application/json'},
-        ).timeout(const Duration(seconds: 30));
+        resp = await _http
+            .get(
+              Uri.parse('$_base/ms/$country/vat/${Uri.encodeComponent(vat)}'),
+              headers: {'Accept': 'application/json'},
+            )
+            .timeout(const Duration(seconds: 30));
       }
     } on TimeoutException {
       throw ViesException('TIMEOUT');
@@ -152,9 +154,7 @@ class ViesClient {
 
     // Il GET segnala gli errori in "userError" (VALID/INVALID sono esiti normali).
     final userError = j['userError'];
-    if (userError is String &&
-        userError != 'VALID' &&
-        userError != 'INVALID') {
+    if (userError is String && userError != 'VALID' && userError != 'INVALID') {
       throw ViesException(userError);
     }
 
@@ -165,7 +165,8 @@ class ViesClient {
       valid: valid,
       name: valid ? _clean(j['name']) : null,
       address: valid ? _clean(j['address']) : null,
-      date: DateTime.tryParse(j['requestDate'] ?? '')?.toLocal() ??
+      date:
+          DateTime.tryParse(j['requestDate'] ?? '')?.toLocal() ??
           DateTime.now(),
       consultation: _clean(j['requestIdentifier']),
     );
